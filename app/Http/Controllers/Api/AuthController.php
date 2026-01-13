@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ForgetPasswordRequest;
+use App\Http\Requests\GoogleAuthRequest;
 use App\Http\Requests\MailVerifyRequest;
 use App\Http\Requests\ResetPasswordRequest;
 use App\Http\Requests\UserLoginRequest;
@@ -14,6 +15,9 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
@@ -175,5 +179,43 @@ class AuthController extends Controller
         }
         
     }
+
+    public function googleAuth(GoogleAuthRequest $request){
+
+    try {
+        $googleUser = Socialite::driver('google')
+            ->stateless()
+            ->userFromToken($request->id_token);
+
+        $user = User::where('email', $googleUser->email)->first();
+
+        if (! $user) {
+            // REGISTER
+            $user = User::create([
+                'name'              => $googleUser->name,
+                'email'             => $googleUser->email,
+                'google_id'         => $googleUser->id,
+                'avatar'            => $googleUser->avatar,
+                'email_verified_at' => now(),
+                'password'          => Str::random(24),
+                'role'              => $request->role,
+            ]);
+        }
+
+        // LOGIN
+        // $user->tokens()->delete();
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return apiSuccess('Login successful', [
+            'user'  => $user,
+            'token' => $token,
+        ]);
+
+    } catch (\Throwable $e) {
+        return apiError($e->getMessage(), 401);
+    }
+    }
+        
 
 }

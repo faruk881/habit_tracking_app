@@ -22,6 +22,8 @@ return new class extends Migration
             $table->timestamp('otp_expires_at')->nullable();
             $table->integer('is_blocked')->nullable();
             $table->integer('is_subscriped')->nullable();
+            $table->string('google_id')->nullable()->unique();
+            $table->string('avatar')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
