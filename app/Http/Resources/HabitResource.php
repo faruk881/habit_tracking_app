@@ -16,10 +16,11 @@ class HabitResource extends JsonResource
     {
 
         return [
-          'id' => $this->id,
-          'name' => $this->name,
-          'status' => $this->status,
-          'description' => $this->description  
+            'id' => $this->id,
+            'name' => $this->name,
+            'status' => $this->status,
+            'is_completed_today' => $this->completed->isNotEmpty() ? 'yes' : 'no',
+            'completed_at' => optional($this->completed->first())->created_at,
         ];
     }
 }

@@ -21,21 +21,18 @@ use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
+    
     public function register(UserRegisterRequest $request) {
         try {
             $fields = $request->validated();
 
-            $fields['password'] = Hash::make($fields['password']);
+            $fields['password'] = Hash::make($fields['password']); // hash na dilao choba
 
             $user = User::create($fields);
 
             $otpResult = send_email_otp($user);
 
             if (!$otpResult['success']) {
-
-                // Optional rollback
-                $user->delete();
-
                 return response()->json([
                     'status'  => 0,
                     'message' => 'Failed to send OTP email',
@@ -57,12 +54,14 @@ class AuthController extends Controller
 
         try {
             $user = User::where('email', $request->email)->first();
+            if($user->google_id){
+                return apiError('The user was created using google. Please login using google.');
+            }
 
             if(!$user->email_verified_at){
 
-                if(!Carbon::now()->gt($user->otp_expires_at)){
+                if($user->otp_expires_at && !Carbon::now()->gt($user->otp_expires_at)){
                     send_email_otp($user);
-
                     return apiError('Hellow! '.$user->name .'. A otp is already sent to email. '.$user->email.'Please verify first to log in.',401);
                 }
 
@@ -107,6 +106,7 @@ class AuthController extends Controller
 
             $user->update([
                 'otp' => null,
+                'otp_expires_at' => null,
                 'email_verified_at' => Carbon::now(),
             ]);
 
@@ -122,8 +122,15 @@ class AuthController extends Controller
         try {
             $user = User::where('email', $request->email)->first();
 
+
             if (! $user) {
-                return apiError('If this email exists, an OTP has been sent');
+                return apiError('The user not exists');
+            }
+            if($user->google_id){
+                return apiError('Cannot reset password. The user was created using google.');
+            }
+            if (! $user->email_verified_at) {
+                return apiError('You cannot request password reset untill you verify email first');
             }
 
             $otp = rand(100000, 999999);

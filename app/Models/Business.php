@@ -7,6 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class Business extends Model
 {
     public function user(){
-        $this->belongsTo(User::class);
+        return $this->belongsTo(User::class);
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ChallengeGroupController;
 use App\Http\Controllers\Api\HabitsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,9 @@ Route::middleware(['auth:sanctum'])->group(function(){
     //Check if logged in user has user role.
     Route::middleware(['user'])->group(function(){
         Route::apiResource('/habits',HabitsController::class);
+        Route::post('/habits/{habit}/complete', [HabitsController::class, 'complete']);
+        Route::get('/view-challenge-type',[ChallengeGroupController::class,'viewChallengeType']);
+        Route::post('/create-new-group',[ChallengeGroupController::class,'createGroupChallenge']);
     });
     
 });

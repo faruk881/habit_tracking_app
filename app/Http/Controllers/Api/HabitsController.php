@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ArchiveHabitRequest;
 use App\Http\Requests\HabitCreateRequest;
 use App\Http\Resources\HabitResource;
+use App\Models\CompletedHabit;
 use App\Models\Habit;
 use App\Resources\App\Http\Resources\HabitsResource;
 use Google\Service\ApigeeRegistry\ApiSpec;
@@ -20,16 +21,23 @@ class HabitsController extends Controller
     public function index(Request $request)
     {
         try{
-            $per_page = $request->input('per_page',10);
-            $habits = Habit::where('user_id',Auth()->user()->id)->paginate($per_page);
-            if($habits->isEmpty()){
+            $per_page = $request->input('per_page', 10);
+
+            $habits = Habit::where('user_id', auth()->id())
+                ->with(['completed' => function ($q) {
+                    $q->whereDate('created_at', today())
+                    ->where('user_id', auth()->id());
+                }])->paginate($per_page);
+
+            if ($habits->isEmpty()) {
                 return apiError('No habits');
             }
+
             return HabitResource::collection($habits)->additional([
-                    'status' => 'success',
-                    'message' => 'Habits loaded'
-                ]);
-        } catch(\Throwable $e) {
+                'status'  => 'success',
+                'message' => 'Habits loaded',
+            ]);
+        } catch(\Exception $e) {
             return apiError($e->getMessage());
         }
 
@@ -111,5 +119,36 @@ class HabitsController extends Controller
         } catch(\Throwable $e) {
             apiError($e->getMessage());
         }
+    }
+
+    /**
+     * Custom method complete the habit
+     */
+    public function complete($habit_id) {
+        try{
+            $habit = Habit::find($habit_id);
+
+            $already_completed = CompletedHabit::where('user_id',auth()->id())
+                                                ->where('habit_id',$habit_id)
+                                                ->whereDate('created_at',now())
+                                                ->exists();
+            if($already_completed) {
+                return apiError('The habit already completed');
+            }
+            
+            if($habit){
+                $completed_habit = [
+                    'user_id' => Auth()->user()->id,
+                    'habit_id' => $habit_id
+                ];
+                CompletedHabit::create($completed_habit);
+                return apiSuccess('Habit completed for today');
+            } else {
+                return apiError('Habit not found');
+            }
+        } catch(\Throwable $e) {
+            return apiError($e->getMessage());
+        }
+
     }
 }

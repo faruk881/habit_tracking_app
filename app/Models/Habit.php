@@ -9,6 +9,10 @@ class Habit extends Model
     protected $guarded = ['id'];
 
     public function user(){
-        $this->belongsTo(User::class);
+        return $this->belongsTo(User::class);
+    }
+
+    public function completed() {
+        return $this->hasMany(CompletedHabit::class);
     }
 }
